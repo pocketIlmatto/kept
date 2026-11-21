@@ -63,3 +63,9 @@ Step 3 complete: the generated Bottle stages now include the docs manifest and u
 consistent mounted pnpm stores during compilation. The linux/arm64 image build
 passed without a second install during compilation. Generator consistency, diff
 checks, pinned Biome, and the full disposable lifecycle smoke check passed.
+
+Step 4 attempted: pushed f475be1f and used Bottle's Update & Reload. The live build
+passed compilation without reinstalling dependencies, but exhausted the VM disk
+later while copying dependency files into the ha-notices stage. Kept is not yet
+running in Bottle. The next deployment needs more build disk headroom or a build
+outside the VM; no app data was deleted and the VM was not resized.
