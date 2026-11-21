@@ -1,0 +1,100 @@
+#!/bin/bash
+# Standalone adaptation of docker/ha/kept-ha-start: no Supervisor or ingress trust.
+set -euo pipefail
+umask 077
+
+install -d -m 0700 /run/kept-bottle
+node /usr/local/lib/kept-bottle/env.mjs >/run/kept-bottle/env
+# shellcheck source=/dev/null
+. /run/kept-bottle/env
+# This package does not use platform service credentials or Home Assistant discovery.
+unset BOTTLE_APP_TOKEN SUPERVISOR_TOKEN HASSIO_TOKEN KEPT_HA_LINK_SECRET_FILE
+
+DATA=$BOTTLE_APP_DATA_DIR
+PGBIN=/usr/lib/postgresql/18/bin
+PGDATA=$DATA/postgres
+SOCKET=/run/postgresql
+pg_pid=
+kept_pid=
+log() { printf 'bottle: %s\n' "$*"; }
+as_postgres() { setpriv --reuid=postgres --regid=postgres --init-groups -- "$@"; }
+as_kept() { setpriv --reuid=kept --regid=kept --init-groups -- "$@"; }
+psql_su() { "$PGBIN/psql" -h "$SOCKET" -U postgres -v ON_ERROR_STOP=1 -qAt "$@"; }
+
+# Run on normal shutdown and startup failures alike. The application stops before its database.
+cleanup() {
+  local status=$?
+  trap - EXIT TERM INT
+  if [[ -n $kept_pid ]]; then
+    kill -TERM "$kept_pid" 2>/dev/null || true
+    wait "$kept_pid" 2>/dev/null || true
+  fi
+  rm -rf /run/kept-owner
+  if [[ -n $pg_pid ]]; then
+    as_postgres "$PGBIN/pg_ctl" -D "$PGDATA" stop -m fast -w -t 20 >/dev/null 2>&1 ||
+      kill -INT "$pg_pid" 2>/dev/null || true
+    wait "$pg_pid" 2>/dev/null || true
+  fi
+  log "stopped"
+  exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 0' TERM INT
+
+# Bottle mounts this directory; root here is an unprivileged user on the host.
+chown root:root "$DATA"
+chmod 0711 "$DATA"
+install -d -m 0700 "$DATA/kept" "$DATA/config" "$DATA/owner" "$PGDATA"
+chown -R kept:kept "$DATA/kept" "$DATA/config"
+chown -R root:root "$DATA/owner"
+chmod -R go-rwx "$DATA/owner"
+chown -R postgres:postgres "$PGDATA"
+install -d -m 0700 -o postgres -g postgres "$SOCKET"
+
+if [[ ! -s $PGDATA/PG_VERSION ]]; then
+  # Never erase a partial/restored cluster automatically: it may contain recoverable data.
+  [[ -z $(find "$PGDATA" -mindepth 1 -maxdepth 1 -print -quit) ]] || {
+    log "postgres directory is nonempty but has no PG_VERSION; repair or restore it"; exit 1;
+  }
+  as_postgres "$PGBIN/initdb" -D "$PGDATA" -U postgres --auth-local=peer --auth-host=scram-sha-256 \
+    -E UTF8 --locale=C.UTF-8 -c huge_pages=off >/dev/null
+fi
+[[ $(cat "$PGDATA/PG_VERSION") == 18 ]] || { log "this image requires PostgreSQL 18 data"; exit 1; }
+if ! grep -q '^local all postgres peer map=boot' "$PGDATA/pg_hba.conf"; then
+  sed -i '1i local all postgres peer map=boot' "$PGDATA/pg_hba.conf"
+  printf 'boot root postgres\nboot postgres postgres\n' >>"$PGDATA/pg_ident.conf"
+fi
+
+env -u KEPT_SMTP_URL -u KEPT_OIDC_CLIENT_SECRET -u KEPT_GOOGLE_CLIENT_SECRET -u KEPT_APPRISE_URL \
+  setpriv --reuid=postgres --regid=postgres --init-groups -- "$PGBIN/postgres" -D "$PGDATA" \
+  -c huge_pages=off -c listen_addresses=127.0.0.1 -c port=5432 -c unix_socket_directories="$SOCKET" \
+  -c shared_buffers=64MB -c max_connections=50 -c work_mem=4MB -c maintenance_work_mem=64MB \
+  -c effective_cache_size=256MB -c wal_level=minimal -c max_wal_senders=0 &
+pg_pid=$!
+for _ in $(seq 120); do
+  "$PGBIN/pg_isready" -q -h "$SOCKET" -U postgres && break
+  kill -0 "$pg_pid" 2>/dev/null || { log "Postgres did not start"; exit 1; }
+  sleep 0.5
+done
+"$PGBIN/pg_isready" -q -h "$SOCKET" -U postgres || { log "Postgres readiness timed out"; exit 1; }
+[[ $(psql_su -d postgres -c "SELECT 1 FROM pg_database WHERE datname = 'kept'") == 1 ]] ||
+  psql_su -d postgres -c 'CREATE DATABASE kept' >/dev/null
+
+env PGHOST="$SOCKET" PGUSER=postgres PGDATABASE=kept \
+  KEPT_DB_OWNER_PASSWORD_FILE="$DATA/owner/kept_owner" kept bootstrap
+chown -R kept:kept "$DATA/config"
+chmod -R go-rwx "$DATA/owner"
+
+# The serving process cannot read the database owner's password.
+install -d -m 0700 -o kept -g kept /run/kept-owner
+install -m 0400 -o kept -g kept "$DATA/owner/kept_owner" /run/kept-owner/kept_owner
+as_kept env KEPT_OWNER_DATABASE_URL=postgres://kept_owner:@127.0.0.1:5432/kept \
+  KEPT_DB_OWNER_PASSWORD_FILE=/run/kept-owner/kept_owner kept migrate
+rm -rf /run/kept-owner
+
+setpriv --reuid=kept --regid=kept --init-groups -- node \
+  --import /app/apps/server/dist/observability/tracing.js /app/apps/server/dist/main.js &
+kept_pid=$!
+wait -n "$kept_pid" "$pg_pid" || true
+log "a process exited unexpectedly"
+exit 1
