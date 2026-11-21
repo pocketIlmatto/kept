@@ -49,6 +49,8 @@ export function bottleEnv(source) {
     KEPT_ROLE: 'all',
     KEPT_HA: '0',
     KEPT_HA_TRUST_GROUPS: '0',
+    // Bottle's router accepts a plain-http same-origin GET only with a same-origin Referer.
+    KEPT_REFERRER_POLICY: 'same-origin',
   };
 }
 

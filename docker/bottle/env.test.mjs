@@ -17,6 +17,7 @@ test('derives HTTPS URL and stores every persistent app path under the mounted d
   }
   assert.equal(env.KEPT_HA, '0');
   assert.equal(env.KEPT_HA_TRUST_GROUPS, '0');
+  assert.equal(env.KEPT_REFERRER_POLICY, 'same-origin');
   assert.equal(env.KEPT_DB_OWNER_PASSWORD_FILE, undefined);
 });
 test('supports a renamed app and local HTTP Bottle instances', () => {

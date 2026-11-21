@@ -44,6 +44,8 @@ export const NOT_IN_ENV_EXAMPLE = {
   KEPT_HA: 'the Home Assistant app sets it',
   KEPT_HA_TRUST_GROUPS: 'the Home Assistant app sets it',
   KEPT_HA_LINK_SECRET_FILE: 'the Home Assistant app sets it',
+  // The Cloud in a Bottle package's own (docker/bottle/env.mjs).
+  KEPT_REFERRER_POLICY: 'the Cloud in a Bottle package sets it',
   // Kept serving TLS itself and rotating its key: the HTTPS page and the key runbook.
   KEPT_TLS_CERT_FILE: 'documented on the HTTPS page',
   KEPT_TLS_KEY_FILE: 'documented on the HTTPS page',
@@ -100,6 +102,7 @@ export const NOT_IN_HA_APP = {
   ),
   KEPT_AI_MOCK: 'tests only',
   KEPT_EVAL_DIR: 'development only',
+  KEPT_REFERRER_POLICY: 'the Cloud in a Bottle package sets it',
   // Not offered in the app as of 1.14.4; decide when someone asks.
   ...Object.fromEntries(
     [

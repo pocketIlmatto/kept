@@ -897,6 +897,27 @@ describe('KEPT_HSTS (#403)', () => {
   });
 });
 
+describe('KEPT_REFERRER_POLICY (Cloud in a Bottle)', () => {
+  const load = async (extra: Record<string, string>) =>
+    loadEnv({ ...validEnv, ...extra }, { configDir: await unusedConfigDir() });
+
+  it('is no-referrer unless set to same-origin', async () => {
+    expect((await load({})).KEPT_REFERRER_POLICY).toBe('no-referrer');
+    expect((await load({ KEPT_REFERRER_POLICY: 'same-origin' })).KEPT_REFERRER_POLICY).toBe(
+      'same-origin',
+    );
+  });
+
+  it('stops startup on any other value, naming the variable', async () => {
+    for (const bad of ['unsafe-url', 'origin', 'SAME-ORIGIN']) {
+      await expect(load({ KEPT_REFERRER_POLICY: bad }), bad).rejects.toMatchObject({
+        code: 'invalid_env',
+        message: expect.stringContaining('KEPT_REFERRER_POLICY'),
+      });
+    }
+  });
+});
+
 describe('KEPT_HTTP_SIGN_IN_DAYS (#404)', () => {
   const load = async (extra: Record<string, string>) =>
     loadEnv({ ...validEnv, ...extra }, { configDir: await unusedConfigDir() });

@@ -247,6 +247,15 @@ const schema = z.object({
     .describe(
       '`on`, `off`; over https Kept sends HSTS for a year; `off` sends `max-age=0`, so browsers forget a stored policy (other plain-http services on the same hostname); over http never sent',
     ),
+  // Cloud in a Bottle (fork): on a plain-http Bottle domain the router accepts the owner's cookie
+  // on a same-origin GET only when it carries a Referer from the app's own origin, so the Bottle
+  // package sends `same-origin`; other sites still get no Referer.
+  KEPT_REFERRER_POLICY: z
+    .enum(['no-referrer', 'same-origin'])
+    .default('no-referrer')
+    .describe(
+      '`no-referrer`, `same-origin`; the `Referrer-Policy` Kept sends; `same-origin` sends a Referer to Kept itself only (Cloud in a Bottle over plain http needs it)',
+    ),
   // #404 (D274): the admin's choice, in `.env` beside the public URL, never in the app: it loosens
   // what a copied cookie is worth. auth/auth.ts sessionPolicy() is what reads it.
   KEPT_HTTP_SIGN_IN_DAYS: z

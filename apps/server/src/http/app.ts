@@ -79,6 +79,7 @@ export type AppEnv = Pick<Env, 'KEPT_PUBLIC_URL'> &
       | 'KEPT_SOURCE_URL'
       | 'KEPT_TRUSTED_PROXIES'
       | 'KEPT_HSTS'
+      | 'KEPT_REFERRER_POLICY'
       | 'KEPT_HTTP_SIGN_IN_DAYS'
       | 'KEPT_EXTRA_ADDRESSES'
       | 'KEPT_SIGNUP_OPEN'
@@ -302,6 +303,7 @@ export async function buildApp(opts: AppOptions): Promise<KeptApp> {
     strictTransportSecurity: https
       ? { maxAge: opts.env.KEPT_HSTS === 'off' ? 0 : 31_536_000, includeSubDomains: false }
       : false,
+    referrerPolicy: { policy: opts.env.KEPT_REFERRER_POLICY ?? 'no-referrer' },
   });
   // Under ingress only, Home Assistant's own page frames Kept (same origin, D273).
   app.addHook('onSend', ingressFraming);

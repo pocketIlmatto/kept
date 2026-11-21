@@ -4,6 +4,13 @@ This fork adds a standalone Bottle package. It compiles the local Kept source, i
 PostgreSQL 18 and pgvector, and runs on port 8080. No external database or Compose stack is
 required. The manifest budgets 1 GiB for runtime and 4 GiB for the build; the host needs
 room for those allocations in addition to Bottle and other apps.
+The source build needs far more temporary disk than the ~1 GB finished image: a 20 GiB
+VM with 8 GiB free failed, while 38 GiB free succeeded. On a local QEMU VM, stop it, run
+`qemu-img resize <disk>.qcow2 +30G`, and boot; cloud-init grows the root filesystem.
+
+The package sets `KEPT_REFERRER_POLICY=same-origin`. On plain-HTTP Bottle domains the router
+needs a same-origin `Referer` to accept the owner cookie on API GETs; without it every
+screen reports "This isn't here any more".
 
 ## Local development
 

@@ -115,6 +115,22 @@ describe('buildApp()', () => {
     expect(res.headers['strict-transport-security']).toBeUndefined();
   });
 
+  it('sends no Referer anywhere by default, and same-origin when configured (Cloud in a Bottle)', async () => {
+    const res = await app.inject({ method: 'GET', url: '/healthz' });
+    expect(res.headers['referrer-policy']).toBe('no-referrer');
+    const bottle = await buildApp({
+      env: { KEPT_PUBLIC_URL: 'http://kept.test', KEPT_REFERRER_POLICY: 'same-origin' },
+      pools,
+    });
+    try {
+      await bottle.ready();
+      const r = await bottle.inject({ method: 'GET', url: '/healthz' });
+      expect(r.headers['referrer-policy']).toBe('same-origin');
+    } finally {
+      await bottle.close();
+    }
+  });
+
   // Step 3 (the scanner trial): the zxing wasm needs 'wasm-unsafe-eval' in script-src, the
   // service worker needs worker-src, camera frames and phone-made labels are blob: images, and
   // the manifest is our own.

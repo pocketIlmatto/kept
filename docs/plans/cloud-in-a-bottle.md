@@ -69,3 +69,17 @@ passed compilation without reinstalling dependencies, but exhausted the VM disk
 later while copying dependency files into the ha-notices stage. Kept is not yet
 running in Bottle. The next deployment needs more build disk headroom or a build
 outside the VM; no app data was deleted and the VM was not resized.
+
+## Deployment resolved
+
+The local QEMU VM's disk was grown from 20 GiB to 50 GiB (`qemu-img resize`, then
+cloud-init grew the root filesystem on boot) and its memory raised to 8 GiB. The
+unchanged build then completed with 33 GiB still free, and Kept passed `/readyz`.
+
+The app then showed "This isn't here any more" on every screen. On a plain-HTTP
+Bottle domain, browsers send no Fetch Metadata, so Bottle's router accepts the owner
+cookie on a same-origin GET only when its `Referer` is the app's own origin, and
+answers 404 otherwise. Kept's global `Referrer-Policy: no-referrer` stripped that
+header from every API GET. Kept now reads `KEPT_REFERRER_POLICY`
+(`no-referrer` by default, unchanged upstream behaviour) and the Bottle package sets
+`same-origin`, which still sends nothing to other origins.
