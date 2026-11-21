@@ -45,3 +45,16 @@ Five configuration tests passed under Node 24 and the local Node 26. Pinned Biom
 shell syntax, TOML parsing, generated-Dockerfile consistency and repository checks passed.
 The original Dockerfile and application source remain unchanged. Rootless Podman and a
 live Bottle instance have not been exercised; deployment is the next validation step.
+
+## Live Bottle build follow-up
+
+The user authorized deployment to Bottle. Its 18.3 GiB VM exhausted disk even with
+8.1 GiB free after cache cleanup: compilation triggered a second pnpm install and
+saved the default package store into an image layer.
+
+3. Keep pnpm's store/cache settings and cache mounts consistent during compilation,
+   and include the docs workspace manifest in the initial dependency install so
+   copying sources does not change workspace membership. Check generation and build
+   the image before committing the packaging fix.
+4. Push the fix and retry Bottle deployment; verify startup or report the remaining
+   concrete platform constraint. Do not delete app data or resize the VM.
