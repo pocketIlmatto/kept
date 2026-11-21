@@ -9,6 +9,9 @@
   A self-hosted, open-source inventory of everything you own and where it is.
 </p>
 
+This fork adds [Cloud in a Bottle deployment](docs/runbooks/cloud-in-a-bottle.md), including a
+container with PostgreSQL, persistent storage, and local build and smoke-test instructions.
+
 <!--
   One style for every badge: flat-square, the kit's ink-2 (#55524C) label and amber (#F0B03A)
   value (apps/web/src/styles/tokens.css); a badge for another product takes that product's colour

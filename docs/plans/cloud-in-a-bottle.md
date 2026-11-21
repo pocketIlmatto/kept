@@ -29,3 +29,19 @@ References:
 - https://cloudinabottle.org/docs/creating_an_app/overview.html
 - https://cloudinabottle.org/docs/creating_an_app/manifest_spec.html
 - https://cloudinabottle.org/docs/how_it_works/routing.html
+
+## Completion
+
+Both steps are complete. The Docker image built on linux/arm64, and the disposable smoke
+test passed with a 1 GiB memory limit and one CPU: setup, login, database extensions and
+credential isolation, unchanged keys/files after container recreation, graceful shutdown,
+and a nonzero container exit when PostgreSQL stops unexpectedly.
+
+The smoke test caught and resolved two startup issues: the inherited image's `/data`
+permissions blocked Bottle's nested mount, and runtime database URLs had to be omitted
+from the bootstrap invocation until it had created the password files.
+
+Five configuration tests passed under Node 24 and the local Node 26. Pinned Biome checks,
+shell syntax, TOML parsing, generated-Dockerfile consistency and repository checks passed.
+The original Dockerfile and application source remain unchanged. Rootless Podman and a
+live Bottle instance have not been exercised; deployment is the next validation step.

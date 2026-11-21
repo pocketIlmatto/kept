@@ -5,8 +5,13 @@ function origin(value) {
   const url = new URL(value);
   if (
     !['http:', 'https:'].includes(url.protocol) ||
-    url.username || url.password || url.search || url.hash || url.pathname !== '/'
-  ) throw new Error('Kept needs an HTTP(S) origin without credentials, path, query or fragment');
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash ||
+    url.pathname !== '/'
+  )
+    throw new Error('Kept needs an HTTP(S) origin without credentials, path, query or fragment');
   return url.origin;
 }
 
@@ -24,7 +29,8 @@ export function bottleEnv(source) {
     }
     // The router URL preserves HTTP and the port on a local Bottle instance.
     const router = new URL(origin(source.BOTTLE_ROUTER_PUBLIC_URL || `https://${zone}`));
-    if (router.host !== zone) throw new Error('BOTTLE_ROUTER_PUBLIC_URL must match BOTTLE_ZONE_DOMAIN');
+    if (router.host !== zone)
+      throw new Error('BOTTLE_ROUTER_PUBLIC_URL must match BOTTLE_ZONE_DOMAIN');
     router.hostname = `${name}.${router.hostname}`;
     publicUrl = router.origin;
   }
@@ -47,7 +53,9 @@ export function bottleEnv(source) {
 }
 
 export function shellEnv(env) {
-  return Object.entries(env).map(([key, value]) => `export ${key}='${value.replaceAll("'", "'\\''")}'`).join('\n');
+  return Object.entries(env)
+    .map(([key, value]) => `export ${key}='${value.replaceAll("'", "'\\''")}'`)
+    .join('\n');
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {

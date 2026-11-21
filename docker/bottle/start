@@ -80,7 +80,9 @@ done
 [[ $(psql_su -d postgres -c "SELECT 1 FROM pg_database WHERE datname = 'kept'") == 1 ]] ||
   psql_su -d postgres -c 'CREATE DATABASE kept' >/dev/null
 
-env PGHOST="$SOCKET" PGUSER=postgres PGDATABASE=kept \
+# The CLI resolves runtime URLs eagerly; omit them until bootstrap has made password files.
+env -u KEPT_DATABASE_URL -u KEPT_AUTH_DATABASE_URL -u KEPT_SYSTEM_DATABASE_URL -u KEPT_OWNER_DATABASE_URL \
+  PGHOST="$SOCKET" PGUSER=postgres PGDATABASE=kept \
   KEPT_DB_OWNER_PASSWORD_FILE="$DATA/owner/kept_owner" kept bootstrap
 chown -R kept:kept "$DATA/config"
 chmod -R go-rwx "$DATA/owner"
