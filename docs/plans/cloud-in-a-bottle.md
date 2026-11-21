@@ -58,3 +58,8 @@ saved the default package store into an image layer.
    the image before committing the packaging fix.
 4. Push the fix and retry Bottle deployment; verify startup or report the remaining
    concrete platform constraint. Do not delete app data or resize the VM.
+
+Step 3 complete: the generated Bottle stages now include the docs manifest and use
+consistent mounted pnpm stores during compilation. The linux/arm64 image build
+passed without a second install during compilation. Generator consistency, diff
+checks, pinned Biome, and the full disposable lifecycle smoke check passed.

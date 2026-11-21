@@ -34,6 +34,7 @@ FROM scratch AS manifests
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml /src/
 COPY apps/server/package.json /src/apps/server/
 COPY apps/web/package.json /src/apps/web/
+COPY apps/docs/package.json /src/apps/docs/
 COPY packages/shared/package.json /src/packages/shared/
 COPY packages/mcp/package.json /src/packages/mcp/
 
@@ -44,7 +45,9 @@ FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS build
 # pnpm through corepack, at the version in package.json's packageManager field.
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     COREPACK_HOME=/corepack \
-    CI=true
+    CI=true \
+    npm_config_store_dir=/pnpm-store \
+    npm_config_cache_dir=/pnpm-cache
 RUN corepack enable
 WORKDIR /src
 COPY --from=manifests /src/ ./
@@ -56,7 +59,9 @@ COPY . .
 # The web build reads KEPT_VERSION (vite.config.ts `define`), so a release's client says its real
 # version in the sidebar and in the sync protocol's clientVersion (D148), not 0.0.0-dev.
 ARG VERSION=0.0.0-dev
-RUN pnpm --filter @kept/shared build \
+RUN --mount=type=cache,id=kept-pnpm-store,target=/pnpm-store \
+    --mount=type=cache,id=kept-pnpm-cache,target=/pnpm-cache \
+    pnpm --filter @kept/shared build \
  && pnpm --filter @kept/mcp build \
  && pnpm --filter @kept/server build \
  && KEPT_VERSION="${VERSION}" pnpm --filter @kept/web build
@@ -85,7 +90,9 @@ RUN node -e ' \
 FROM ${NODE_IMAGE} AS prod-deps
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     COREPACK_HOME=/corepack \
-    CI=true
+    CI=true \
+    npm_config_store_dir=/pnpm-store \
+    npm_config_cache_dir=/pnpm-cache
 RUN corepack enable
 WORKDIR /src
 COPY --from=manifests /src/ ./
